@@ -65,3 +65,157 @@ End-to-end testing confirmed that requests routed through
 the Application Load Balancer reached the private EC2
 application server, which retrieved and displayed records
 from the private Amazon RDS database.
+
+
+---
+
+## 2. AWS Architecture Components
+
+The architecture was deployed in a dedicated AWS account
+using the US East (N. Virginia) region.
+
+| AWS Component | Configuration | Architectural Purpose |
+|---|---|---|
+| Amazon VPC | Dedicated VPC | Provides an isolated virtual network |
+| Availability Zones | Two AZs | Distributes network resources across separate AZs |
+| Public Subnets | Two | Host the internet-facing Application Load Balancer |
+| Private Application Subnets | Two | Provide isolated network segments for application workloads |
+| Private Database Subnets | Two | Provide isolated network segments for database resources |
+| Internet Gateway | Attached to VPC | Enables internet routing for public subnets |
+| Route Tables | Public, private application, private database | Control network traffic routing |
+| Application Load Balancer | Internet-facing ALB | Receives and forwards application requests |
+| Amazon EC2 | Amazon Linux 2023 | Hosts the Python application |
+| Amazon RDS | MySQL 8.4 | Provides a managed relational database |
+| AWS IAM | EC2 instance role | Provides temporary credentials for AWS API access |
+| AWS Systems Manager | Session Manager | Enables administrative access without public SSH |
+| Parameter Store | SecureString parameter | Stores the application database password |
+| VPC Interface Endpoints | Systems Manager endpoints | Enable private connectivity to supported AWS services |
+| Amazon EBS | EC2 root volume | Provides persistent storage for the application server |
+
+### Network Architecture
+
+The VPC contains six subnets distributed across two
+Availability Zones:
+
+- 2 public subnets
+- 2 private application subnets
+- 2 private database subnets
+
+The Application Load Balancer is deployed across
+the public subnets.
+
+The EC2 application server is deployed in a private
+application subnet without a public IP address.
+
+The RDS database is deployed using a database subnet
+group containing private database subnets.
+
+This design separates internet-facing resources
+from application and database workloads.
+
+---
+
+## 3. Security Architecture and Controls
+
+Security controls were implemented across the network,
+identity, application, database, and management layers.
+
+| Security Domain | Implemented Control | Security Objective |
+|---|---|---|
+| Network Security | Public and private subnet segmentation | Reduce direct exposure of application and database resources |
+| Network Security | Security group restrictions | Limit communication to authorized components |
+| Identity and Access Management | EC2 IAM role | Avoid long-term AWS access keys |
+| Least Privilege | Restricted Parameter Store IAM policy | Limit access to the required database credential |
+| Secrets Management | Systems Manager Parameter Store SecureString | Protect database credentials |
+| Encryption in Transit | TLS with RDS CA certificate verification | Protect database communications |
+| Database Security | Read-only MySQL account | Restrict database modification privileges |
+| Operating System Security | Dedicated non-root Linux service account | Reduce application process privileges |
+| Application Security | Restricted systemd capabilities | Permit binding to port 80 without running the application as root |
+| Infrastructure Security | Private EC2 without a public IP | Reduce direct internet exposure |
+| Administrative Access | AWS Systems Manager Session Manager | Avoid exposing SSH access to the internet |
+
+### Security Group Architecture
+
+Three primary security groups control application traffic.
+
+| Security Group | Inbound Rule | Source |
+|---|---|---|
+| ALB Security Group | HTTP 80 | Internet |
+| Application Security Group | HTTP 80 | ALB Security Group |
+| Database Security Group | MySQL 3306 | Application Security Group |
+
+The ALB security group also permits inbound HTTPS
+traffic on port 443; however, an HTTPS listener
+was not configured during this lab.
+
+The database security group does not permit
+direct internet access.
+
+### Identity and Access Management
+
+The EC2 application server uses an IAM instance role
+rather than long-term AWS access keys.
+
+The role includes:
+
+- AmazonSSMManagedInstanceCore for Systems Manager functionality.
+- A custom policy permitting access to the required
+  Parameter Store credential.
+
+The application retrieves its database password
+at runtime using AWS API calls.
+
+### Database Security
+
+Amazon RDS for MySQL was configured with:
+
+- No public accessibility.
+- A private database subnet group.
+- Security group access restricted to the application tier.
+- TLS-encrypted application connections with CA verification.
+- A dedicated read-only application database account.
+
+The application account was granted SELECT permissions
+on the required table.
+
+A database permission test confirmed that SELECT
+operations succeeded while UPDATE operations were denied.
+
+### Operating System Security
+
+The Python application runs under a dedicated
+non-root Linux service account.
+
+A systemd service manages application startup
+and restart behavior.
+
+The service uses a restricted Linux capability
+to bind to HTTP port 80 without running as root.
+
+---
+
+## 4. Security Architecture Considerations
+
+This project demonstrates security controls within
+a functional AWS lab environment.
+
+The following improvements would be required
+before treating the design as production-ready:
+
+1. Configure HTTPS on the Application Load Balancer
+   using AWS Certificate Manager.
+2. Redirect HTTP traffic to HTTPS.
+3. Replace Python's built-in HTTP server with
+   a production-grade application server.
+4. Deploy application instances across multiple
+   Availability Zones for high availability.
+5. Implement centralized logging, monitoring,
+   and alerting.
+6. Define backup, recovery, and disaster recovery
+   requirements.
+7. Implement infrastructure as code for
+   repeatable deployments.
+
+These improvements represent future architecture
+enhancements rather than controls implemented
+in the current lab.
