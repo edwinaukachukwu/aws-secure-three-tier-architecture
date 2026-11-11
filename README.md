@@ -13,7 +13,7 @@ connections, and centralized secrets management.
 
 The solution was deployed in a dedicated AWS lab
 environment and validated through end-to-end
-application connectivity and security testing.
+application connectivity and security testing. 
 
 ### Project Objectives
 
