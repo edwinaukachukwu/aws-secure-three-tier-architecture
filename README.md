@@ -219,3 +219,67 @@ before treating the design as production-ready:
 These improvements represent future architecture
 enhancements rather than controls implemented
 in the current lab.
+
+
+---
+
+## 5. Security Testing and Validation
+
+Security validation was performed to verify the
+effectiveness of network segmentation, identity
+controls, secrets management, database permissions,
+and application connectivity.
+
+### Security Test Results
+
+| Test ID | Security Control | Test Performed | Expected Result | Actual Result | Status |
+|---|---|---|---|---|---|
+| ST-01 | Network Segmentation | Verified EC2 was deployed in a private subnet without a public IP | EC2 is not directly internet-facing | Private EC2 configuration confirmed | PASS |
+| ST-02 | Database Isolation | Verified RDS public accessibility settings | Database is not publicly accessible | Public accessibility disabled | PASS |
+| ST-03 | Security Groups | Reviewed application security group inbound rules | HTTP traffic restricted to ALB security group | Inbound port 80 restricted to ALB security group | PASS |
+| ST-04 | Database Security Groups | Reviewed RDS inbound rules | MySQL access restricted to application security group | Port 3306 restricted to application security group | PASS |
+| ST-05 | IAM Role Access | Retrieved authorized Parameter Store parameter using EC2 IAM role | Authorized request succeeds | Parameter retrieval succeeded | PASS |
+| ST-06 | Least-Privilege IAM | Reviewed custom Parameter Store policy | Permission scoped to required parameter | Resource-specific policy configured | PASS |
+| ST-07 | Secrets Management | Retrieved database credential from Parameter Store at runtime | Application authenticates without hardcoded database password | Runtime credential retrieval succeeded | PASS |
+| ST-08 | Encryption in Transit | Connected to RDS using TLS with CA certificate verification | Encrypted database connection succeeds | TLS connection established successfully | PASS |
+| ST-09 | Database Least Privilege | Executed SELECT using read-only database account | SELECT operation succeeds | SELECT succeeded | PASS |
+| ST-10 | Database Least Privilege | Attempted UPDATE using read-only database account | UPDATE operation denied | UPDATE denied | PASS |
+| ST-11 | OS Least Privilege | Verified application runs under dedicated Linux account | Application runs without root privileges | Non-root service configured and running | PASS |
+| ST-12 | Application Health | Requested application health endpoint | HTTP 200 response | Health endpoint returned HTTP 200 | PASS |
+| ST-13 | End-to-End Connectivity | Accessed application through ALB DNS address | Application retrieves and displays RDS records | Both database records displayed successfully | PASS |
+
+### Validation Summary
+
+All 13 documented validation checks passed.
+
+Testing confirmed that:
+
+- Application and database resources were deployed
+  within private network segments.
+- Security groups restricted communication between tiers.
+- The application accessed AWS services through
+  an IAM instance role.
+- Database credentials were retrieved from
+  Systems Manager Parameter Store.
+- Database communications used TLS with
+  certificate verification.
+- Database permissions restricted unauthorized
+  modification operations.
+- The application operated under a dedicated
+  non-root Linux service account.
+- End-to-end application connectivity was successful.
+
+### Security Testing Limitations
+
+The validation activities demonstrate that selected
+security controls functioned as intended within
+the lab environment.
+
+They do not represent a comprehensive penetration
+test, formal compliance assessment, or production
+security certification.
+
+Additional testing would be required for production
+deployment, including vulnerability scanning,
+security monitoring, resilience testing,
+and broader IAM permission analysis.
